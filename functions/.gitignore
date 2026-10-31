@@ -1,4 +1,5 @@
 # Compiled JavaScript files
+lib/
 lib/**/*.js
 lib/**/*.js.map
 
@@ -7,4 +8,21 @@ typings/
 
 # Node.js dependency directory
 node_modules/
+
+# Local & debug logs
 *.local
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.runtimeconfig.json
+
+# Environment secrets & credentials
+.env
+.env.*
+!.env.example
+*service-account*.json
+*serviceAccountKey*.json

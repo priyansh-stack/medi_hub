@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. users/{uid}
+    match /users/{uid} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 2. memberProfiles/{memberId}
+    match /memberProfiles/{memberId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 3. families/{familyId}
+    match /families/{familyId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 4. familyMemberships/{membershipId}
+    match /familyMemberships/{membershipId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 5. subscriptions/{subscriptionId}
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+  }
+}

@@ -12,17 +12,12 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IDEs and Editors
 *.iml
 *.ipr
 *.iws
 .idea/
-
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -34,20 +29,62 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Symbolication related
+# Symbolication / Obfuscation related
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android Studio / Gradle build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
+.gradle/
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+**/android/captures/
+
+# iOS CocoaPods & artifacts
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.framework
 
 # Widget Preview related
 .widget_preview/
 
-/lib/firebase_options.dart
+# Firebase & Cloud Functions
+node_modules/
+functions/node_modules/
+functions/lib/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.runtimeconfig.json
+*.local
+.firebase/
+lib/firebase_options.dart
+
+
+# Environment secrets & credentials
+.env
+.env.*
+!.env.example
+*service-account*.json
+*serviceAccountKey*.json
+*google-credentials*.json
+*.keystore
+*.jks
+
+# Test artifacts & automated screenshots
+brain_screenshots/
+scripts/
+test-results/
+*.diff.png
 
 
