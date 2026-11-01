@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/member_profile_model.dart';
 import '../../data/models/plan_model.dart';
+import '../../data/models/subscription_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/onboarding_repository.dart';
 import '../../data/repositories/subscription_repository.dart';
@@ -151,6 +152,25 @@ class OnboardingCubit extends Cubit<OnboardingState> {
     }
   }
 
+  /// Complete Checkout synchronously
+  void completeCheckout({
+    required SubscriptionModel subscription,
+    required PlanModel plan,
+    required UserModel updatedUser,
+  }) {
+    if (state is OnboardingLoaded) {
+      final current = state as OnboardingLoaded;
+      emit(OnboardingLoaded(
+        bundle: current.bundle.copyWith(
+          user: updatedUser,
+          subscription: subscription,
+        ),
+        currentStep: OnboardingStep.completed,
+        selectedPlan: plan,
+      ));
+    }
+  }
+
   /// Change Plan (Return to step 7 from mock checkout)
   void returnToPlanSelection() {
     if (state is OnboardingLoaded) {
@@ -178,4 +198,48 @@ class OnboardingCubit extends Cubit<OnboardingState> {
       emit(OnboardingError('Failed to refresh data: ${e.toString()}'));
     }
   }
+
+  /// Update existing member profile in real-time
+  Future<void> updateMemberProfile(MemberProfileModel profile) async {
+    try {
+      final updated = await onboardingRepository.updateMemberProfile(profile);
+      if (state is OnboardingLoaded) {
+        final current = state as OnboardingLoaded;
+        final updatedBundle = OnboardingBundle(
+          user: current.bundle.user,
+          memberProfile: updated,
+          family: current.bundle.family,
+          membership: current.bundle.membership,
+          subscription: current.bundle.subscription,
+        );
+        emit(current.copyWith(bundle: updatedBundle));
+      }
+    } catch (e) {
+      emit(OnboardingError('Failed to update profile: ${e.toString()}'));
+    }
+  }
+
+  /// Update family group name in real-time
+  Future<void> updateFamilyName(String familyId, String newName) async {
+    try {
+      final updatedFamily = await onboardingRepository.updateFamilyName(
+        familyId: familyId,
+        newName: newName,
+      );
+      if (state is OnboardingLoaded) {
+        final current = state as OnboardingLoaded;
+        final updatedBundle = OnboardingBundle(
+          user: current.bundle.user,
+          memberProfile: current.bundle.memberProfile,
+          family: updatedFamily,
+          membership: current.bundle.membership,
+          subscription: current.bundle.subscription,
+        );
+        emit(current.copyWith(bundle: updatedBundle));
+      }
+    } catch (e) {
+      emit(OnboardingError('Failed to update family name: ${e.toString()}'));
+    }
+  }
 }
+

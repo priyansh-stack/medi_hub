@@ -36,5 +36,34 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
       allow delete: if false;
     }
+
+    // 6. healthRecords/{recordId}
+    match /healthRecords/{recordId} {
+      allow read, write, delete: if isAuthenticated();
+    }
+
+    // 7. appointments/{appointmentId}
+    match /appointments/{appointmentId} {
+      allow read, write, delete: if isAuthenticated();
+    }
+
+    // 8. paymentTransactions/{transactionId}
+    match /paymentTransactions/{transactionId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 9. clinicalPlans/{planId}
+    match /clinicalPlans/{planId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // 10. profileCompletions/{memberId}
+    match /profileCompletions/{memberId} {
+      allow read, write: if isAuthenticated();
+      allow delete: if false;
+    }
+
   }
 }

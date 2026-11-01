@@ -59,6 +59,27 @@ enum OnboardingStep {
         return 'COMPLETED';
     }
   }
+
+  String toDisplayTitle() {
+    switch (this) {
+      case OnboardingStep.completed:
+        return 'Active / Fully Onboarded';
+      case OnboardingStep.planSelected:
+        return 'Plan Selected';
+      case OnboardingStep.familyCreated:
+        return 'Family Group Created';
+      case OnboardingStep.profileSaved:
+        return 'Health Profile Saved';
+      case OnboardingStep.contactSaved:
+        return 'Contact Saved';
+      case OnboardingStep.emailVerified:
+        return 'Email Verified';
+      case OnboardingStep.accountCreated:
+        return 'Account Created';
+      case OnboardingStep.noAccount:
+        return 'Not Onboarded';
+    }
+  }
 }
 
 class UserModel extends Equatable {

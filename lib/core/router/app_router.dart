@@ -212,13 +212,6 @@ class AppRouter {
                     ? PlanCatalog.findById(bundle.user.pendingPlanId!)
                     : PlanCatalog.familyPro);
 
-            checkoutCubit.initialize(
-              plan: targetPlan,
-              familyId: family.familyId,
-              userEmail: bundle.user.email,
-              userName: bundle.user.fullName,
-            );
-
             return MockCheckoutScreen(
               user: bundle.user,
               family: family,

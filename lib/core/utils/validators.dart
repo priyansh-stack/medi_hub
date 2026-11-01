@@ -128,6 +128,42 @@ class Validators {
     return null;
   }
 
+  static String? validatePinCode(String? value) => validatePostalCode(value);
+
+  static DateTime? parseFlexibleDate(String input) {
+    final clean = input.trim();
+    if (clean.isEmpty) return null;
+
+    // DD/MM/YYYY or DD-MM-YYYY
+    final dmyRegex = RegExp(r'^(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4})$');
+    final match = dmyRegex.firstMatch(clean);
+    if (match != null) {
+      final day = int.parse(match.group(1)!);
+      final month = int.parse(match.group(2)!);
+      final year = int.parse(match.group(3)!);
+      try {
+        return DateTime(year, month, day);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return DateTime.tryParse(clean);
+  }
+
+  static String? validateDateString(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Date of birth is required';
+    }
+    final parsed = parseFlexibleDate(value);
+    if (parsed == null) {
+      return 'Please enter a valid date (DD/MM/YYYY)';
+    }
+    return validateDateOfBirth(parsed);
+  }
+
+  static String? validateDob(String? value) => validateDateString(value);
+
   static String? validateDateOfBirth(DateTime? dob) {
     if (dob == null) {
       return 'Date of birth is required';

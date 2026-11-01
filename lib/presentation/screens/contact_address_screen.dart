@@ -148,7 +148,7 @@ class _ContactAddressScreenState extends State<ContactAddressScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: (value != null && items.contains(value))
+          initialValue: (value != null && items.contains(value))
               ? value
               : (items.isNotEmpty ? items.first : null),
           isExpanded: true,

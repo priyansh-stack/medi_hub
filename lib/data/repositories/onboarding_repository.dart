@@ -21,20 +21,34 @@ class OnboardingBundle {
     this.membership,
     this.subscription,
   });
+
+  OnboardingBundle copyWith({
+    UserModel? user,
+    MemberProfileModel? memberProfile,
+    FamilyModel? family,
+    FamilyMembershipModel? membership,
+    SubscriptionModel? subscription,
+  }) {
+    return OnboardingBundle(
+      user: user ?? this.user,
+      memberProfile: memberProfile ?? this.memberProfile,
+      family: family ?? this.family,
+      membership: membership ?? this.membership,
+      subscription: subscription ?? this.subscription,
+    );
+  }
 }
 
 class OnboardingRepository {
   final FirestoreService _firestoreService;
   final LocalStorageService _localStorageService;
-  final Uuid _uuid;
 
   OnboardingRepository({
     FirestoreService? firestoreService,
     LocalStorageService? localStorageService,
     Uuid? uuid,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _localStorageService = localStorageService ?? LocalStorageService(),
-        _uuid = uuid ?? const Uuid();
+        _localStorageService = localStorageService ?? LocalStorageService();
 
   /// Step 4: Save Contact & Address Details
   Future<UserModel> saveContactAndAddress({
@@ -282,4 +296,27 @@ class OnboardingRepository {
       subscription: subscription,
     );
   }
+
+  /// Update existing member profile details (Personal info, address, emergency contact)
+  Future<MemberProfileModel> updateMemberProfile(MemberProfileModel profile) async {
+    final updatedProfile = profile.copyWith(updatedAt: DateTime.now());
+    await _firestoreService.saveMemberProfile(updatedProfile);
+    return updatedProfile;
+  }
+
+  /// Update family group name
+  Future<FamilyModel> updateFamilyName({
+    required String familyId,
+    required String newName,
+  }) async {
+    await _firestoreService.updateFamilyName(familyId, newName);
+    final updated = await _firestoreService.getFamily(familyId);
+    return updated ??
+        FamilyModel(
+          familyId: familyId,
+          familyName: newName,
+          adminUid: '',
+        );
+  }
 }
+

@@ -87,4 +87,20 @@ scripts/
 test-results/
 *.diff.png
 
+# Temporary & Scratch Files
+scratch/
+*.tmp
+*.bak
+*.orig
+*.rej
+Thumbs.db
+ehthumbs.db
+
+# Windows / Visual Studio temp
+*.suo
+*.user
+*.userosv
+*.sln.docstates
+
+
 

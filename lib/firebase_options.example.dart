@@ -16,3 +16,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
   );
 }
+

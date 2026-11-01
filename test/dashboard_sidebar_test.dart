@@ -54,13 +54,11 @@ void main() {
       mockTransactionId: 'txn_mock_9999',
     );
 
-    testWidgets('Desktop view renders permanent sidebar and navigates between tabs', (tester) async {
+    testWidgets('Desktop view renders permanent sidebar and navigates between 5 tabs', (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-
-      bool changePlanTapped = false;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -71,59 +69,86 @@ void main() {
             family: testFamily,
             subscription: testSubscription,
             plan: PlanCatalog.familyPro,
-            onChangePlan: () {
-              changePlanTapped = true;
-            },
+            onChangePlan: () {},
           ),
         ),
       );
 
       // Verify MediHub Branding in Sidebar
-      expect(find.text('MediHub'), findsOneWidget);
+      expect(find.text('MediHub'), findsWidgets);
       expect(find.text('Health & Family Portal'), findsOneWidget);
 
-      // Verify Sidebar Navigation Items exist
-      expect(find.text('Overview'), findsWidgets);
-      expect(find.text('Family Group'), findsOneWidget);
-      expect(find.text('Health Profile'), findsOneWidget);
-      expect(find.text('Subscription'), findsOneWidget);
-      expect(find.text('Medical Records'), findsOneWidget);
-      expect(find.text('Consultations'), findsOneWidget);
+      // Verify Sidebar Navigation Items exist (5 items canonical MediHub tabs)
+      expect(find.text('Dashboard'), findsWidgets);
+      expect(find.text('Family Group'), findsWidgets);
+      expect(find.text('Health Records'), findsWidgets);
+      expect(find.text('Appointments'), findsWidgets);
+      expect(find.text('Subscription'), findsWidgets);
+      expect(find.text('Settings'), findsNothing);
 
-      // Verify Overview content is displayed
+      // Verify User Details and Active Plan Tag in Sidebar Footer
+      expect(find.text('Priyanshu Sharma'), findsOneWidget);
+      expect(find.text('mem_12345678'), findsOneWidget);
+      expect(find.text('Active (PRO)'), findsOneWidget);
+
+      // Verify FAB 'Add Family Member' exists
+      expect(find.widgetWithText(FloatingActionButton, 'Add Family Member'), findsOneWidget);
+
+      // Verify Overview Welcome Banner and clean empty page placeholder
       expect(find.text('Welcome, Priyanshu Sharma!'), findsOneWidget);
-      expect(find.text('Sharma Household'), findsWidgets);
+      expect(find.text('Welcome to MediHub'), findsOneWidget);
 
-      // Navigate to 'Family Group' tab
-      await tester.tap(find.text('Family Group'));
+      // Click the Floating Action Button -> Should navigate to Family Group & open Add Family Member Dialog
+      await tester.tap(find.widgetWithText(FloatingActionButton, 'Add Family Member'));
       await tester.pumpAndSettle();
+
+      // Verify Add Family Member Dialog is open
+      expect(find.text('Step 1: Member Demographics'), findsOneWidget);
+      expect(find.text('Full Name *'), findsOneWidget);
+
+      // Close the Add Family Member dialog
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+
+      // Now we are on 'Family Group' tab
       expect(find.text('Household Members Roster'), findsOneWidget);
       expect(find.text('FAMILY ADMIN'), findsOneWidget);
+      expect(find.text('T1 Safety'), findsOneWidget);
+      expect(find.text('T2 Core'), findsOneWidget);
+      expect(find.text('Click card to view / edit health profile'), findsOneWidget);
 
-      // Navigate to 'Health Profile' tab
-      await tester.tap(find.text('Health Profile'));
+      // Open Member Health Profile Screen by clicking the member card
+      await tester.tap(find.text('Click card to view / edit health profile'));
       await tester.pumpAndSettle();
-      expect(find.text('Contact & Emergency Records'), findsOneWidget);
-      expect(find.text('+91 9876543210'), findsWidgets);
 
-      // Navigate to 'Subscription' tab
-      await tester.tap(find.text('Subscription'));
-      await tester.pumpAndSettle();
-      expect(find.text('Included Plan Features'), findsOneWidget);
-      expect(find.text('MOCK ACTIVE'), findsWidgets);
+      // Verify Member Health Profile Screen & 4-Tier Collection Plan
+      expect(find.textContaining('Health Profile'), findsWidgets);
+      expect(find.textContaining('Tier 1'), findsOneWidget);
+      expect(find.textContaining('Tier 2'), findsOneWidget);
+      expect(find.textContaining('Tier 3'), findsOneWidget);
+      expect(find.textContaining('Tier 4'), findsOneWidget);
 
-      // Navigate to 'Medical Records' tab
-      await tester.tap(find.text('Medical Records'));
+      // Go back to Family Group tab
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
-      expect(find.text('Family Health Vault'), findsOneWidget);
+
+      // Navigate to 'Health Records' tab
+      await tester.tap(find.text('Health Records'));
+      await tester.pumpAndSettle();
+      expect(find.text('Personal Health Records Vault'), findsOneWidget);
       expect(find.text('Upload Record'), findsOneWidget);
 
-      // Navigate to 'Consultations' tab
-      await tester.tap(find.text('Consultations'));
+      // Navigate to 'Appointments' tab
+      await tester.tap(find.text('Appointments'));
       await tester.pumpAndSettle();
-      expect(find.text('Doctor Consultations & Appointments'), findsOneWidget);
-      expect(find.text('No upcoming appointments scheduled'), findsOneWidget);
+      expect(find.text('Doctor Appointments & Consultations'), findsOneWidget);
+      expect(find.text('Book Appointment'), findsOneWidget);
+
+      // Navigate to 'Subscription' tab
+      await tester.tap(find.text('Subscription').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Available Family Plans'), findsOneWidget);
+      expect(find.text('Mock Payment History'), findsOneWidget);
     });
   });
 }
-

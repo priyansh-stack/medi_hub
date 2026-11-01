@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'data/repositories/appointments_repository.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/health_records_repository.dart';
 import 'data/repositories/onboarding_repository.dart';
 import 'data/repositories/subscription_repository.dart';
 import 'data/services/local_storage_service.dart';
@@ -53,6 +55,12 @@ class MediHubApp extends StatelessWidget {
         ),
         RepositoryProvider<SubscriptionRepository>(
           create: (_) => SubscriptionRepository(localStorageService: localStorageService),
+        ),
+        RepositoryProvider<HealthRecordsRepository>(
+          create: (_) => HealthRecordsRepository(),
+        ),
+        RepositoryProvider<AppointmentsRepository>(
+          create: (_) => AppointmentsRepository(),
         ),
       ],
       child: MultiBlocProvider(

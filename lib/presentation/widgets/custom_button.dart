@@ -44,11 +44,13 @@ class CustomButton extends StatelessWidget {
         children: [
           Icon(icon, size: 18),
           const SizedBox(width: 8),
-          Text(text),
+          Flexible(
+            child: Text(text, overflow: TextOverflow.ellipsis),
+          ),
         ],
       );
     } else {
-      childContent = Text(text);
+      childContent = Text(text, overflow: TextOverflow.ellipsis);
     }
 
     Widget button;

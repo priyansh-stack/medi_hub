@@ -26,7 +26,10 @@ class MockPaymentBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'TEST / MOCK PAYMENT MODE',
@@ -37,7 +40,6 @@ class MockPaymentBanner extends StatelessWidget {
                         color: AppColors.mockBadgeText,
                       ),
                     ),
-                    SizedBox(width: 8),
                     Badge(
                       label: Text('SIMULATION'),
                       backgroundColor: AppColors.mockBadgeText,

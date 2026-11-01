@@ -14,7 +14,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/mock_payment_banner.dart';
 import '../widgets/step_progress_bar.dart';
 
-class MockCheckoutScreen extends StatelessWidget {
+class MockCheckoutScreen extends StatefulWidget {
   final UserModel user;
   final FamilyModel family;
   final PlanModel plan;
@@ -31,6 +31,31 @@ class MockCheckoutScreen extends StatelessWidget {
   });
 
   @override
+  State<MockCheckoutScreen> createState() => _MockCheckoutScreenState();
+}
+
+class _MockCheckoutScreenState extends State<MockCheckoutScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final cubit = context.read<CheckoutCubit>();
+      final currentState = cubit.state;
+      final isAlreadyInitialized = currentState is CheckoutInitial && currentState.plan.id == widget.plan.id;
+      final isCurrentlySimulating = currentState is CheckoutProcessing && currentState.message.contains('Simulating');
+      if (!isAlreadyInitialized && !isCurrentlySimulating && currentState is! CheckoutSuccess) {
+        cubit.initialize(
+          plan: widget.plan,
+          familyId: widget.family.familyId,
+          userEmail: widget.user.email,
+          userName: widget.user.fullName,
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -39,7 +64,7 @@ class MockCheckoutScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.read<CheckoutCubit>().cancelCheckout(currentUser: user);
+            context.read<CheckoutCubit>().cancelCheckout(currentUser: widget.user);
           },
         ),
       ),
@@ -52,21 +77,29 @@ class MockCheckoutScreen extends StatelessWidget {
                 backgroundColor: AppColors.success,
               ),
             );
-            final obState = context.read<OnboardingCubit>().state;
-            final currentUser = (obState is OnboardingLoaded) ? obState.bundle.user : user;
+            final obCubit = context.read<OnboardingCubit>();
+            final obState = obCubit.state;
+            final currentUser = (obState is OnboardingLoaded) ? obState.bundle.user : widget.user;
             final memberId = (currentUser.memberId != null && currentUser.memberId!.isNotEmpty)
                 ? currentUser.memberId
-                : 'mem_${user.uid}';
+                : 'mem_${widget.user.uid}';
             final updatedUser = currentUser.copyWith(
               memberId: memberId,
               onboardingStatus: OnboardingStep.completed,
               pendingPlanId: null,
             );
+
+            // Synchronously update OnboardingCubit state so router immediately recognises completion
+            obCubit.completeCheckout(
+              subscription: state.subscription,
+              plan: state.plan,
+              updatedUser: updatedUser,
+            );
+
             context.read<AuthBloc>().add(AuthUserUpdated(updatedUser));
-            context.read<OnboardingCubit>().refreshBundle(user.uid);
-            onPaymentCompleted();
+            widget.onPaymentCompleted();
           } else if (state is CheckoutCancelledState) {
-            onReturnToPlanSelection();
+            widget.onReturnToPlanSelection();
           }
         },
         builder: (context, state) {
@@ -184,31 +217,34 @@ class MockCheckoutScreen extends StatelessWidget {
                                     ],
                                   ),
                                   const Divider(height: 22, color: AppColors.border),
-                                  _buildInvoiceRow('Customer Name', user.fullName),
+                                  _buildInvoiceRow('Customer Name', widget.user.fullName),
                                   const SizedBox(height: 10),
-                                  _buildInvoiceRow('Customer Email', user.email),
+                                  _buildInvoiceRow('Customer Email', widget.user.email),
                                   const SizedBox(height: 10),
-                                  _buildInvoiceRow('Family Group', family.familyName),
+                                  _buildInvoiceRow('Family Group', widget.family.familyName),
                                   const SizedBox(height: 10),
-                                  _buildInvoiceRow('Selected Plan', plan.name),
+                                  _buildInvoiceRow('Selected Plan', widget.plan.name),
                                   const SizedBox(height: 10),
                                   _buildInvoiceRow('Billing Interval', 'Monthly (Mock)'),
                                   const SizedBox(height: 10),
-                                  _buildInvoiceRow('Member Limit', plan.memberLimitDescription),
+                                  _buildInvoiceRow('Member Limit', widget.plan.memberLimitDescription),
                                   const Divider(height: 22, color: AppColors.border),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text(
-                                        'Total Mock Charge',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
+                                      const Flexible(
+                                        child: Text(
+                                          'Total Mock Charge',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textPrimary,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(width: 12),
                                       Text(
-                                        '₹${plan.amount.toInt()} / month',
+                                        '₹${widget.plan.amount.toInt()} / month',
                                         style: const TextStyle(
                                           fontSize: 19,
                                           fontWeight: FontWeight.w800,
@@ -230,9 +266,9 @@ class MockCheckoutScreen extends StatelessWidget {
                               isLoading: isProcessing,
                               onPressed: () {
                                 context.read<CheckoutCubit>().simulatePaymentSuccess(
-                                      currentUser: user,
-                                      familyId: family.familyId,
-                                      plan: plan,
+                                      currentUser: widget.user,
+                                      familyId: widget.family.familyId,
+                                      plan: widget.plan,
                                     );
                               },
                             ),
@@ -246,9 +282,9 @@ class MockCheckoutScreen extends StatelessWidget {
                               isLoading: isProcessing,
                               onPressed: () {
                                 context.read<CheckoutCubit>().simulatePaymentFailure(
-                                      currentUser: user,
-                                      familyId: family.familyId,
-                                      plan: plan,
+                                      currentUser: widget.user,
+                                      familyId: widget.family.familyId,
+                                      plan: widget.plan,
                                     );
                               },
                             ),
@@ -261,7 +297,7 @@ class MockCheckoutScreen extends StatelessWidget {
                               icon: Icons.arrow_back_rounded,
                               isLoading: isProcessing,
                               onPressed: () {
-                                context.read<CheckoutCubit>().cancelCheckout(currentUser: user);
+                                context.read<CheckoutCubit>().cancelCheckout(currentUser: widget.user);
                               },
                             ),
 
@@ -288,12 +324,18 @@ class MockCheckoutScreen extends StatelessWidget {
           label,
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
         ),
       ],

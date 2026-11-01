@@ -28,6 +28,7 @@ class PlanModel extends Equatable {
   });
 
   bool get isFree => amount == 0;
+  String get memberLimit => memberLimitDescription;
 
   @override
   List<Object?> get props => [

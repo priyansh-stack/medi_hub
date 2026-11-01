@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../../core/constants/plan_catalog.dart';
+import '../models/payment_transaction_model.dart';
 import '../models/plan_model.dart';
 import '../models/subscription_model.dart';
 import '../models/user_model.dart';
@@ -34,10 +35,17 @@ class SubscriptionRepository {
     required String familyId,
     required PlanModel plan,
   }) async {
+    final isAlreadyCompleted = currentUser.onboardingStatus == OnboardingStep.completed;
+
     if (plan.isFree) {
       // Free plan: Skip checkout, activate subscription immediately
-      final existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
+      SubscriptionModel? existingSub;
+      try {
+        existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
+      } catch (_) {}
+
       final subId = existingSub?.subscriptionId ?? 'sub_free_${_uuid.v4().substring(0, 8)}';
+      final transactionId = 'txn_free_${DateTime.now().millisecondsSinceEpoch}';
 
       final subscription = SubscriptionModel(
         subscriptionId: subId,
@@ -48,18 +56,40 @@ class SubscriptionRepository {
         billingCycle: 'MONTHLY',
         status: 'FREE',
         paymentMode: 'MOCK',
-        mockTransactionId: 'txn_free_${DateTime.now().millisecondsSinceEpoch}',
+        mockTransactionId: transactionId,
         createdAt: existingSub?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      await _firestoreService.saveSubscription(subscription);
+      try {
+        await _firestoreService.saveSubscription(subscription);
+      } catch (_) {}
+
+      // Record transaction
+      try {
+        await _firestoreService.savePaymentTransaction(
+          PaymentTransactionModel(
+            transactionId: transactionId,
+            familyId: familyId,
+            memberId: currentUser.memberId ?? 'mem_${currentUser.uid}',
+            planId: plan.id,
+            planName: plan.name,
+            amount: 0,
+            currency: plan.currency,
+            status: 'SUCCESS',
+            paymentMode: 'MOCK',
+            createdAt: DateTime.now(),
+          ),
+        );
+      } catch (_) {}
 
       // Mark onboarding complete
-      await _firestoreService.updateUser(currentUser.uid, {
-        'pendingPlanId': plan.id,
-        'onboardingStatus': OnboardingStep.completed.toDbValue(),
-      });
+      try {
+        await _firestoreService.updateUser(currentUser.uid, {
+          'pendingPlanId': plan.id,
+          'onboardingStatus': OnboardingStep.completed.toDbValue(),
+        });
+      } catch (_) {}
 
       final updatedUser = currentUser.copyWith(
         pendingPlanId: plan.id,
@@ -71,15 +101,19 @@ class SubscriptionRepository {
 
       return subscription;
     } else {
-      // Paid plan: Mark planSelected, ready for Mock Checkout
-      await _firestoreService.updateUser(currentUser.uid, {
-        'pendingPlanId': plan.id,
-        'onboardingStatus': OnboardingStep.planSelected.toDbValue(),
-      });
+      // Paid plan: If user is new, mark planSelected; if already completed, preserve completed
+      final newStatus = isAlreadyCompleted ? OnboardingStep.completed : OnboardingStep.planSelected;
+
+      try {
+        await _firestoreService.updateUser(currentUser.uid, {
+          'pendingPlanId': plan.id,
+          'onboardingStatus': newStatus.toDbValue(),
+        });
+      } catch (_) {}
 
       final updatedUser = currentUser.copyWith(
         pendingPlanId: plan.id,
-        onboardingStatus: OnboardingStep.planSelected,
+        onboardingStatus: newStatus,
         updatedAt: DateTime.now(),
       );
       await _localStorageService.saveUser(updatedUser);
@@ -94,9 +128,12 @@ class SubscriptionRepository {
     required String familyId,
     required PlanModel plan,
   }) async {
-    final existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
-    final subId = existingSub?.subscriptionId ?? 'sub_mock_${_uuid.v4().substring(0, 8)}';
+    SubscriptionModel? existingSub;
+    try {
+      existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
+    } catch (_) {}
 
+    final subId = existingSub?.subscriptionId ?? 'sub_mock_${_uuid.v4().substring(0, 8)}';
     final transactionId = 'txn_mock_${DateTime.now().millisecondsSinceEpoch}_${_uuid.v4().substring(0, 4)}';
 
     final subscription = SubscriptionModel(
@@ -113,13 +150,35 @@ class SubscriptionRepository {
       updatedAt: DateTime.now(),
     );
 
-    await _firestoreService.saveSubscription(subscription);
+    try {
+      await _firestoreService.saveSubscription(subscription);
+    } catch (_) {}
+
+    // Record transaction
+    try {
+      await _firestoreService.savePaymentTransaction(
+        PaymentTransactionModel(
+          transactionId: transactionId,
+          familyId: familyId,
+          memberId: currentUser.memberId ?? 'mem_${currentUser.uid}',
+          planId: plan.id,
+          planName: plan.name,
+          amount: plan.amount,
+          currency: plan.currency,
+          status: 'SUCCESS',
+          paymentMode: 'MOCK',
+          createdAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {}
 
     // Mark onboarding complete
-    await _firestoreService.updateUser(currentUser.uid, {
-      'pendingPlanId': null,
-      'onboardingStatus': OnboardingStep.completed.toDbValue(),
-    });
+    try {
+      await _firestoreService.updateUser(currentUser.uid, {
+        'pendingPlanId': null,
+        'onboardingStatus': OnboardingStep.completed.toDbValue(),
+      });
+    } catch (_) {}
 
     final updatedUser = currentUser.copyWith(
       pendingPlanId: null,
@@ -139,8 +198,13 @@ class SubscriptionRepository {
     required PlanModel plan,
     String? reason,
   }) async {
-    final existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
+    SubscriptionModel? existingSub;
+    try {
+      existingSub = await _firestoreService.getSubscriptionForFamily(familyId);
+    } catch (_) {}
+
     final subId = existingSub?.subscriptionId ?? 'sub_mock_${_uuid.v4().substring(0, 8)}';
+    final failedTxnId = 'txn_failed_${DateTime.now().millisecondsSinceEpoch}';
 
     final subscription = SubscriptionModel(
       subscriptionId: subId,
@@ -151,22 +215,46 @@ class SubscriptionRepository {
       billingCycle: 'MONTHLY',
       status: 'PAYMENT_FAILED',
       paymentMode: 'MOCK',
-      mockTransactionId: 'txn_failed_${DateTime.now().millisecondsSinceEpoch}',
+      mockTransactionId: failedTxnId,
       createdAt: existingSub?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
-    await _firestoreService.saveSubscription(subscription);
+    try {
+      await _firestoreService.saveSubscription(subscription);
+    } catch (_) {}
 
-    // Keep onboardingStatus at planSelected so user can retry or change plan
-    await _firestoreService.updateUser(currentUser.uid, {
-      'pendingPlanId': plan.id,
-      'onboardingStatus': OnboardingStep.planSelected.toDbValue(),
-    });
+    // Record transaction
+    try {
+      await _firestoreService.savePaymentTransaction(
+        PaymentTransactionModel(
+          transactionId: failedTxnId,
+          familyId: familyId,
+          memberId: currentUser.memberId ?? 'mem_${currentUser.uid}',
+          planId: plan.id,
+          planName: plan.name,
+          amount: plan.amount,
+          currency: plan.currency,
+          status: 'FAILED',
+          paymentMode: 'MOCK',
+          createdAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {}
+
+    final isAlreadyCompleted = currentUser.onboardingStatus == OnboardingStep.completed;
+    final failureStatus = isAlreadyCompleted ? OnboardingStep.completed : OnboardingStep.planSelected;
+
+    try {
+      await _firestoreService.updateUser(currentUser.uid, {
+        'pendingPlanId': plan.id,
+        'onboardingStatus': failureStatus.toDbValue(),
+      });
+    } catch (_) {}
 
     final updatedUser = currentUser.copyWith(
       pendingPlanId: plan.id,
-      onboardingStatus: OnboardingStep.planSelected,
+      onboardingStatus: failureStatus,
       updatedAt: DateTime.now(),
     );
     await _localStorageService.saveUser(updatedUser);
@@ -178,13 +266,17 @@ class SubscriptionRepository {
   Future<void> cancelCheckout({
     required UserModel currentUser,
   }) async {
-    // Return status to familyCreated so user is back at plan selection
-    await _firestoreService.updateUser(currentUser.uid, {
-      'onboardingStatus': OnboardingStep.familyCreated.toDbValue(),
-    });
+    final isAlreadyCompleted = currentUser.onboardingStatus == OnboardingStep.completed;
+    final cancelStatus = isAlreadyCompleted ? OnboardingStep.completed : OnboardingStep.familyCreated;
+
+    try {
+      await _firestoreService.updateUser(currentUser.uid, {
+        'onboardingStatus': cancelStatus.toDbValue(),
+      });
+    } catch (_) {}
 
     final updatedUser = currentUser.copyWith(
-      onboardingStatus: OnboardingStep.familyCreated,
+      onboardingStatus: cancelStatus,
       updatedAt: DateTime.now(),
     );
     await _localStorageService.saveUser(updatedUser);
@@ -193,4 +285,9 @@ class SubscriptionRepository {
   Future<SubscriptionModel?> getFamilySubscription(String familyId) async {
     return await _firestoreService.getSubscriptionForFamily(familyId);
   }
+
+  Future<List<PaymentTransactionModel>> getPaymentHistory(String familyId) async {
+    return await _firestoreService.getPaymentTransactionsForFamily(familyId);
+  }
 }
+
